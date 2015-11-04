@@ -16,113 +16,114 @@
  */
 package org.thoughtcrime.securesms.mms;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.thoughtcrime.securesms.crypto.MasterSecret;
-import org.thoughtcrime.securesms.database.DatabaseFactory;
-import org.thoughtcrime.securesms.providers.PartProvider;
-
-import android.content.ContentUris;
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.content.res.Resources.Theme;
 import android.net.Uri;
-import android.util.Log;
-import android.widget.ImageView;
+import android.support.annotation.DrawableRes;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
-import ws.com.google.android.mms.pdu.PduPart;
+import org.thoughtcrime.securesms.attachments.Attachment;
+import org.thoughtcrime.securesms.attachments.UriAttachment;
+import org.thoughtcrime.securesms.database.AttachmentDatabase;
+import org.thoughtcrime.securesms.util.MediaUtil;
+import org.thoughtcrime.securesms.util.Util;
+import org.whispersystems.libaxolotl.util.guava.Optional;
+
+import java.io.IOException;
 
 public abstract class Slide {
 
-  protected static final int MAX_MESSAGE_SIZE = 1048576;
-	
-  protected final PduPart part;
-  protected final Context context;
-  protected MasterSecret masterSecret;
-	
-  public Slide(Context context, PduPart part) {
-    this.part    = part;
-    this.context = context;
-  }
-	
-  public Slide(Context context, MasterSecret masterSecret, PduPart part) {
-    this(context, part);
-    this.masterSecret = masterSecret;
-  }
-	
-  public InputStream getPartDataInputStream() throws FileNotFoundException {
-    Uri partUri = part.getDataUri();
-		
-    Log.w("Slide", "Loading Part URI: " + partUri);
-		
-    if (PartProvider.isAuthority(partUri))
-      return DatabaseFactory.getEncryptingPartDatabase(context, masterSecret).getPartStream(ContentUris.parseId(partUri));
-    else
-      return context.getContentResolver().openInputStream(partUri);
-  }
-	
-  protected static long getMediaSize(Context context, Uri uri) throws IOException {
-    InputStream in = context.getContentResolver().openInputStream(uri);
-    long size      = 0;
-    byte[] buffer  = new byte[512];
-    int read;
-		
-    while ((read = in.read(buffer)) != -1)
-      size += read;
-		
-    return size;
-  }
-	
-  protected byte[] getPartData() {
-    if (part.getData() != null)
-      return part.getData();
-		
-    long partId = ContentUris.parseId(part.getDataUri());
-    return DatabaseFactory.getEncryptingPartDatabase(context, masterSecret).getPart(partId, true).getData();
-  }
-	
-  public String getContentType() {
-    return new String(part.getContentType());
-  }
-	
-  public Uri getUri() {
-    return part.getDataUri();
-  }
-	
-  public Bitmap getThumbnail(int maxWidth, int maxHeight) {
-    throw new AssertionError("getThumbnail() called on non-thumbnail producing slide!");
+  protected final Attachment attachment;
+  protected final Context    context;
+
+  public Slide(@NonNull Context context, @NonNull Attachment attachment) {
+    this.context    = context;
+    this.attachment = attachment;
+
   }
 
-  public void setThumbnailOn(ImageView imageView) {
-    imageView.setImageBitmap(getThumbnail(imageView.getWidth(), imageView.getHeight()));
+  public String getContentType() {
+    return attachment.getContentType();
+  }
+
+  @Nullable
+  public Uri getUri() {
+    return attachment.getDataUri();
+  }
+
+  @Nullable
+  public Uri getThumbnailUri() {
+    return attachment.getThumbnailUri();
   }
 
   public boolean hasImage() {
     return false;
   }
-	
+
   public boolean hasVideo() {
     return false;
   }
-	
+
   public boolean hasAudio() {
     return false;
   }
-	
-  public Bitmap getImage() {
-    throw new AssertionError("getImage() called on non-image slide!");
+
+  public @NonNull String getContentDescription() { return ""; }
+
+  public Attachment asAttachment() {
+    return attachment;
   }
-	
-  public boolean hasText() {
+
+  public boolean isInProgress() {
+    return attachment.isInProgress();
+  }
+
+  public boolean isPendingDownload() {
+    return getTransferState() == AttachmentDatabase.TRANSFER_PROGRESS_FAILED ||
+           getTransferState() == AttachmentDatabase.TRANSFER_PROGRESS_AUTO_PENDING;
+  }
+
+  public long getTransferState() {
+    return attachment.getTransferState();
+  }
+
+  public @DrawableRes int getPlaceholderRes(Theme theme) {
+    throw new AssertionError("getPlaceholderRes() called for non-drawable slide");
+  }
+
+  public boolean hasPlaceholder() {
     return false;
   }
-	
-  public String getText() {
-    throw new AssertionError("getText() called on non-text slide!");
+
+  protected static Attachment constructAttachmentFromUri(@NonNull Context context,
+                                                         @NonNull Uri     uri,
+                                                         @NonNull String  defaultMime,
+                                                                  long     size)
+    throws IOException
+  {
+    Optional<String> resolvedType = Optional.fromNullable(MediaUtil.getMimeType(context, uri));
+    return new UriAttachment(uri, resolvedType.or(defaultMime), AttachmentDatabase.TRANSFER_PROGRESS_STARTED, size);
   }
-	
-  public PduPart getPart() {
-    return part;
+
+  @Override
+  public boolean equals(Object other) {
+    if (!(other instanceof Slide)) return false;
+
+    Slide that = (Slide)other;
+
+    return Util.equals(this.getContentType(), that.getContentType()) &&
+           this.hasAudio() == that.hasAudio()                        &&
+           this.hasImage() == that.hasImage()                        &&
+           this.hasVideo() == that.hasVideo()                        &&
+           this.getTransferState() == that.getTransferState()        &&
+           Util.equals(this.getUri(), that.getUri())                 &&
+           Util.equals(this.getThumbnailUri(), that.getThumbnailUri());
+  }
+
+  @Override
+  public int hashCode() {
+    return Util.hashCode(getContentType(), hasAudio(), hasImage(),
+                         hasVideo(), getUri(), getThumbnailUri(), getTransferState());
   }
 }

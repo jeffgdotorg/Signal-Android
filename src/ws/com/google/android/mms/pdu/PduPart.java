@@ -121,8 +121,6 @@ public class PduPart {
 
      private static final String TAG = "PduPart";
 
-     private boolean isEncrypted;
-     
      /**
       * Empty Constructor.
       */
@@ -130,14 +128,6 @@ public class PduPart {
          mPartHeader = new HashMap<Integer, Object>();
      }
 
-     public void setEncrypted(boolean isEncrypted) {
-    	 this.isEncrypted = isEncrypted;
-     }
-     
-     public boolean getEncrypted() {
-    	 return isEncrypted;
-     }
-     
      /**
       * Set part data. The data are stored as byte array.
       *
@@ -299,7 +289,7 @@ public class PduPart {
      /**
       *  Set Content-Type value.
       *
-      *  @param value the value
+      *  @param contentType the value
       *  @throws NullPointerException if the value is null.
       */
      public void setContentType(byte[] contentType) {
@@ -322,7 +312,7 @@ public class PduPart {
      /**
       * Set Content-Transfer-Encoding value
       *
-      * @param contentId the content-id value
+      * @param contentTransferEncoding the value
       * @throws NullPointerException if the value is null.
       */
      public void setContentTransferEncoding(byte[] contentTransferEncoding) {

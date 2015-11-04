@@ -17,62 +17,81 @@
 package org.thoughtcrime.securesms.mms;
 
 import android.content.Context;
+import android.support.annotation.Nullable;
 
-import org.thoughtcrime.securesms.crypto.MasterSecret;
+import org.thoughtcrime.securesms.attachments.Attachment;
+import org.thoughtcrime.securesms.util.MediaUtil;
 
-import java.io.UnsupportedEncodingException;
 import java.util.LinkedList;
 import java.util.List;
 
-import ws.com.google.android.mms.ContentType;
-import ws.com.google.android.mms.pdu.CharacterSets;
-import ws.com.google.android.mms.pdu.PduBody;
-
 public class SlideDeck {
 
-  private final List<Slide> slides = new LinkedList<Slide>();
+  private final List<Slide> slides = new LinkedList<>();
 
-  public SlideDeck(Context context, MasterSecret masterSecret, PduBody body) {
-    try {
-      for (int i=0;i<body.getPartsNum();i++) {
-        String contentType = new String(body.getPart(i).getContentType(), CharacterSets.MIMENAME_ISO_8859_1);
-        if (ContentType.isImageType(contentType))
-          slides.add(new ImageSlide(context, masterSecret, body.getPart(i)));
-        else if (ContentType.isVideoType(contentType))
-          slides.add(new VideoSlide(context, body.getPart(i)));
-        else if (ContentType.isAudioType(contentType))
-          slides.add(new AudioSlide(context, body.getPart(i)));
-        else if (ContentType.isTextType(contentType))
-          slides.add(new TextSlide(context, masterSecret, body.getPart(i)));
-      }	
-    } catch (UnsupportedEncodingException uee) {
-      throw new AssertionError(uee);
+  public SlideDeck(Context context, List<Attachment> attachments) {
+    for (Attachment attachment : attachments) {
+      Slide slide = MediaUtil.getSlideForAttachment(context, attachment);
+      if (slide != null) slides.add(slide);
     }
+  }
+
+  public SlideDeck(Context context, Attachment attachment) {
+    Slide slide = MediaUtil.getSlideForAttachment(context, attachment);
+    if (slide != null) slides.add(slide);
   }
 
   public SlideDeck() {
   }
-	
+
   public void clear() {
     slides.clear();
   }
-	
-  public PduBody toPduBody() {
-    PduBody body = new PduBody();
+
+  public List<Attachment> asAttachments() {
+    List<Attachment> attachments = new LinkedList<>();
 
     for (Slide slide : slides) {
-      body.addPart(slide.getPart());
+      attachments.add(slide.asAttachment());
     }
-		
-    return body;
+
+    return attachments;
   }
 
   public void addSlide(Slide slide) {
     slides.add(slide);
   }
-	
+
   public List<Slide> getSlides() {
     return slides;
   }
-	
+
+  public boolean containsMediaSlide() {
+    for (Slide slide : slides) {
+      if (slide.hasImage() || slide.hasVideo() || slide.hasAudio()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public @Nullable Slide getThumbnailSlide() {
+    for (Slide slide : slides) {
+      if (slide.hasImage()) {
+        return slide;
+      }
+    }
+
+    return null;
+  }
+
+  public @Nullable AudioSlide getAudioSlide() {
+    for (Slide slide : slides) {
+      if (slide.hasAudio()) {
+        return (AudioSlide)slide;
+      }
+    }
+
+    return null;
+  }
 }

@@ -5,7 +5,7 @@ project.properties
 bin/
 gen/
 .idea/
-TextSecure.iml
+*.iml
 out
 tests
 lint.xml
@@ -17,6 +17,9 @@ build-log.xml
 .gradle
 build
 signing.properties
-gradle
-gradlew
-gradlew.bat
+library/lib/
+library/obj/
+ffpr
+test/androidTestEspresso/res/values/arrays.xml
+obj/
+jni/libspeex/.deps/

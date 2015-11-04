@@ -23,9 +23,7 @@ import ws.com.google.android.mms.InvalidHeaderValueException;
 
 public class SendReq extends MultimediaMessagePdu {
     private static final String TAG = "SendReq";
-    private long databaseMessageId;
-    private long messageBox;
-    
+
     public SendReq() {
         super();
 
@@ -90,20 +88,6 @@ public class SendReq extends MultimediaMessagePdu {
         super(headers, body);
     }
 
-    public SendReq(PduHeaders headers, PduBody body, long messageId, long messageBox) {
-        super(headers, body);
-        this.databaseMessageId = messageId;
-        this.messageBox        = messageBox;
-    }
-    
-    public long getDatabaseMessageBox() {
-    	return this.messageBox;
-    }
-    
-    public long getDatabaseMessageId() {
-    	return databaseMessageId;
-    }
-    
     /**
      * Get Bcc value.
      *
